@@ -1,0 +1,206 @@
+---
+title: "Homework 1"
+author: "Jie Lu"
+date: "2018-1-30"
+output:
+  html_document:
+    df_print: paged
+---
+     
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE,
+                      message = FALSE)
+```
+
+
+*For all questions involving histograms, choose a sensible binwidth and breakpoints, unless otherwise indicated.*
+
+### 1. Income
+
+a) Describe in detail the features you observe in the boxplots below, plotted with data from the *ex0525* dataset, **Sleuth3** page. (see page 29 in *Graphical Data Analysis in R* for a list of features to concentrate on, and the numbered list on the bottom of page 43 for an example of how to describe features of a graph in words.) [5 points]
+
+```{r}
+#install.packages("Sleuth3")
+library(Sleuth3)
+library(tidyverse)
+
+# convert Educ from an integer to a factor, and make "<12" the first factor level 
+mydata <- ex0525 %>% 
+  dplyr::mutate(Educ = forcats::fct_relevel(Educ, "<12"))
+
+ggplot(mydata, aes(Educ, Income2005)) +
+  geom_boxplot() + 
+  coord_flip()   # for horizontal boxplots
+```
+  
+**Answer**:  
+
+1. Most features of the boxplots from 1st row to 5th row are going from large to small. Those include maximu, minimum, 3rd quartile, 1sr quartile, medain and the dispersion of distribution. 
+
+2. All of them are right skewed. 
+
+3. All of them have some outliers and many suspected outliers above the maximum.
+
+4. We may refer the groups with longer year of education would have larger amount of income in general.
+
+5. We may infer people have longer year of education would have a more wide disoersion of income. 
+
+
+b) Plot a histogram of the `Income2005` variable in the dataset referenced in part a). [3 points]
+
+```{r}
+ggplot(mydata, aes(Income2005)) + geom_histogram(color = "blue",fill="red", binwidth = 27000)
+```
+
+  
+c) Use `+facet_wrap(~Educ)` to facet the histogram on education level. [3 points]
+
+```{r}
+ggplot(mydata, aes(Income2005)) + geom_histogram(color = "blue",fill="red", binwidth = 27000)+facet_wrap(~Educ)
+```
+
+
+d) What do you learn from the histograms that wasn't apparent in the boxplots from question 1? [3 points]
+
+**Answer:**
+
+1. The group <12 has the smallest number of observation. 
+2. The group 12 has the largest number of observation.
+3. The group 13-15 has the second large amount of data, and the rest two have roughly similar amount of data.
+
+
+### 2. Respiratory Rates
+
+a) Plot right closed and right open histograms for each of the two variables in the *ex0824* dataset in the **Sleuth3** package using default binwidths and breaks. (4 histograms in total). [4 points]
+
+```{r}
+mydata2 <- ex0824
+par(mfrow = c(2, 2), las = 1)
+Histogram = hist(mydata2$Age, col = "red", right = FALSE, xlab = 'Age (right open)', main=NULL)
+hist(mydata2$Age, col = "red",  right = TRUE, xlab = 'Age (right closed)', main=NULL)
+hist(mydata2$Rate, col = "red", right = FALSE, xlab = 'Rate (right open)', main=NULL)
+hist(mydata2$Rate, col='red', right = TRUE, xlab = 'Rate (right closed)', main=NULL)
+
+```
+
+
+b) For which variable, `Age` or `Rate`, do the two versions differ more? Why? [3 points]
+
+**Answer**:
+
+**Rate** differs more than the **Age**, because **Age** is stored as decimal float, while **Rate** is stared as interger. The probability an observation in **Rate** will fall precisely on the boundaries are much higher than that of *Age*.
+
+c) Redraw the `Age` histograms with different parameters so that the right closed and right open versions are identical. [3 points]
+
+```{r}
+par(mfrow = c(1, 2), las = 1)
+hist(mydata2$Age, col = "red",breaks = Histogram$breaks - 0.1, right = FALSE, xlab = 'Age (right open)', main=NULL)
+hist(mydata2$Age, col = "red",breaks = Histogram$breaks - 0.1, right = TRUE, xlab = 'Age (right closed)', main=NULL)
+```
+
+### 3. Movie budgets
+
+Are there rounding patterns in the `budget` variable of the *movies* in the **ggplot2movies** package? If so, what are the patterns? (Note: according to the textbook this dataset is in the **ggplot2** package, but it has since been moved to a separate package.) Support your conclusions with graphical evidence. You are encouraged to break the variable down into different budget ranges and consider them separately. [8 points] 
+
+```{r}
+library(ggplot2movies)
+mydata3 <- movies
+
+s1=subset(mydata3,mydata3$budget<=1000000)
+s11=subset(mydata3,mydata3$budget<=500000)
+s12=subset(s1,mydata3$budget>500000)
+
+s2=subset(mydata3,mydata3$budget<=5000000)
+s21=subset(s2,mydata3$budget>1000000)
+
+s3=subset(mydata3,mydata3$budget<=50000000)
+s31=subset(s3,mydata3$budget>5000000)
+
+s4=subset(mydata3,mydata3$budget>50000000)
+
+hist(s11$budget, xlim=c(0,5*10^5), breaks=seq(0,10*10^6,1000), main = 'smaller than 0.5M', xlab = NULL)
+hist(s12$budget, xlim=c(5*10^5,1*10^6), breaks=seq(0,10*10^6,1000), main = 'larger than 0.5M smaller than 1M', xlab = NULL)
+hist(s21$budget, xlim=c(1*10^6,5*10^6),breaks=seq(0,10*10^8,5000), main = 'larger than 1M but smaller than 5M', xlab = NULL)
+hist(s31$budget, xlim=c(10*10^6,50*10^6),breaks=seq(0,10*10^8,10000), main = 'larger than 5m smaller than 50m', xlab = NULL)
+hist(s4$budget, xlim=c(50*10^6,150*10^6),breaks=seq(0,10*10^9,50000) ,main = 'larger than 50m', xlab = NULL)
+```
+
+
+**Answer:**
+We can see from the above histograms, when broken into a large number of cells, roughly consistent peaks appear. That shows the point where the data is rounded into/
+
+
+
+
+
+### 4. Finches
+
+a) Plot separate density histograms of the beak depth of the finches in *case0201* from the **Sleuth3** package, with density curves overlaid as on page 34 of the textbook. (However, do this by facetting on `Year` rather than using `grid.arrange`). [3 points]
+
+```{r}
+mydata4 = case0201
+ggplot(mydata4, aes(Depth)) + geom_histogram(aes(y = ..density..), binwidth=0.2, col = 'blue', fill = "red") + geom_density(col = 'black') + facet_wrap(~Year)
+```
+
+
+
+b) Plot both density curves on the same graph to facilitate comparison. Make 1976 yellow and 1978 blue.  Use alpha blending so the fills are transparent. [3 points]
+
+```{r}
+library(ggplot2)
+library(reshape2)
+
+mydata5 <-melt(data.frame(Year1976 = mydata4$Depth[mydata4$Year == '1976'], Year1978 = mydata4$Depth[mydata4$Year == '1978']))
+
+ggplot(mydata5,aes(value, fill=variable))  + geom_histogram(aes(y = ..density..), binwidth=0.2, col = 'blue', fill = 'red')  + scale_fill_manual(values = c("yellow","blue"))+ geom_density(alpha=0.15)
+```
+
+
+
+c) Based on your graphs in parts a) and b), describe how the distributions differ by year. [3 points]
+
+**Answer:**
+
+1. The center of the distribution of 1976 is on the right of 1978. They have similar distribution.
+
+2. Year 1978 has a larger mean, median and mode value of the depth
+
+
+
+d) What is the cause of the difference according to the information in the help file? [3 points]
+
+```{r}
+help(case0201)
+```
+
+**Answer:**
+
+The help file states: 1977, a severe drought caused vegetation to wither, and the only remaining food source was a large, tough seed, which the finches ordinarily ignored. Were the birds with larger and stronger beaks for opening these tough seeds more likely to survive that year.
+
+From the graph, we may refer that in 1977 finches that have larger and stronger beaks tend to survive the drought, and thus in 1978 the beak depth of the finches move rightwards.
+
+
+
+### 5. Salary
+
+Is the `Salary` variable in the *case0102* of **Sleuth3** normally distributed?  Use two different graphical methods to provide evidence. [6 points]
+
+**First method: histogram with density curve**
+
+```{r}
+mydata6 = case0102
+ggplot(mydata6, aes(Salary)) + geom_histogram(aes(y = ..density..), binwidth=200, col = 'blue', fill = 'red')+ geom_density(col = 'black')
+```
+
+
+We can see it doesn't look like a bell curve and can help provide visual intuition that the data is not normally distributed.
+
+**Second method: Q-Q plot**
+
+```{r}
+library("ggpubr")
+qqnorm(mydata6$Salary)
+qqline(mydata6$Salary,col=2)
+```
+
+We can see it doesn't fit well the related straight line, so the data is very likely to be not normally distributed.

@@ -1,0 +1,334 @@
+---
+title: "Homework #2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE,
+                      message = FALSE, 
+                      cache = TRUE)
+```
+
+### Chapter 4
+
+#### 1. Slot Machines (Chapter 4 exercises, #3, p. 72)
+
+[5 points]
+
+Do not use *grid.arrange()* for this exercise. Rather, use *gather()* to tidy the data and then facet on window number.  To make the comparison, use relative frequency bar charts (the heights of the bars in each facet sum to one).  Describe how the distributions differ.
+
+```{r}
+library(ggplot2)
+library("DAAG")
+library(tidyr)
+data1 <- vlt
+tidy <- vlt %>%
+  gather(key="window", value ="Value", -prize, -night) %>%
+  ggplot(aes(Value, window))+ geom_bar(aes(y=(..count..)/sum(..count..)))+
+  facet_wrap(~window) +ylab("Frequency") + xlab("Symbols")
+
+tidy
+```
+
+Answer:
+
+We can see the distribution of each window has similar spread. They are all right skewed. And they all have a gap at 4, and all are dense at 0. The main difference is window 2 has a drop at 1. Both window 1 and window 3 have 1 as their second highest frequency.
+
+#### 2. Detailed Mortality data ("Death2015.txt")
+
+[21 points]
+
+This data comes from the "Detailed Mortality" database available on https://wonder.cdc.gov/
+
+Code for all preprocessing must be shown. (That is, don't open in the file in Excel or similar, change things around, save it, and then import to R. Why? Because your steps are not reproducible.)
+
+(a) For `Place of Death`, `Ten-Year Age Groups`, and `ICD Chapter Code` variables, do the following:
+
+Identify the type of variable (nominal, ordinal, or discrete) and draw a horizontal bar chart using best practices for order of categories.
+
+Answer:
+
+Data type:
+
+Place of Death: nominal
+
+Ten-Year Age Groups: ordinal
+
+ICD Chapter Code: nominal
+
+Thus I only reorder the plots of Place and ICD (cause of death), and keep the original order of the age group.
+
+Also, notice there is a wrong level for "5-14" years, so we reset the level for the age group.
+
+```{r}
+library(dplyr)
+#setwd("C:/Users/Jie Lu/Desktop")
+data2 <- read.delim("Death2015.txt",fill = TRUE , header = TRUE)
+levels(data2$Ten.Year.Age.Groups) <- c("","< 1 year","1-4 years","5-14 years","15-24 years","25-34 years","35-44 years","45-54 years","55-64 years","65-74 years","75-84 years","85+ years","Not Stated")
+
+Place <- data2%>%
+  group_by(Place.of.Death) %>%
+  summarize(deaths=sum(Deaths))
+
+ggplot(Place, aes(x = reorder(Place.of.Death, deaths), y = deaths)) + 
+  geom_col() +coord_flip()+ylab("Death Frequency") + xlab("Place of Death")
+
+Age <- data2 %>% 
+  group_by(Ten.Year.Age.Groups) %>% 
+  summarize(deaths=sum(Deaths))
+ggplot(Age, aes(x=Ten.Year.Age.Groups, y = deaths)) + 
+  geom_col() +coord_flip()+ylab("Death Frequency") + xlab("Ten-Year Age Groups")
+
+ICD <- data2 %>% 
+  group_by(ICD.Chapter.Code) %>% 
+  summarize(deaths=sum(Deaths))
+ggplot(ICD, aes(x = reorder(ICD.Chapter.Code, deaths), y = deaths)) + 
+  geom_col() +coord_flip()+ylab("Death Frequency")  + xlab("ICD Chapter Code")
+
+```
+
+(b) Create horizontal bar charts for the ICD sub-chapter codes, one plot per ICD chapter code, by faceting on chapter code, *not* by using *grid.arrange()*.  Use `scales = "free"` with `facet_wrap()`. It should look like this (with data, of course!). Describe notable features.
+
+```{r, fig.height=15, fig.width=15}
+data3 <- aggregate(Deaths~ICD.Sub.Chapter.Code+ICD.Chapter.Code,data2, sum)
+ggplot(data3, aes(x =ICD.Sub.Chapter.Code , y = Deaths)) +
+  geom_col() + facet_wrap(~ICD.Chapter.Code, scales = 'free') + coord_flip()
+
+```
+
+
+Answer:
+
+In this graph, it's hard to compare across subplots as they have very different magnitude. For example, J00-J98 has widest spread, while U00-U99 ranges only from 0-5. For U00-R99, all data is from U00-U49.
+
+Besides, in each subplot, there are several dominant cause of death. For example A30-A49 is the dominant code in the first subgraph. C00-C97 is the dominant one for the second subgraph, so on and so forth. 
+
+
+
+(c) Change the `scales` parameter to `scales = "free_y"`. What changed?  What information does this set of graphs provide that wasn't available in part (b)?
+
+```{r, fig.height=15, fig.width=15}
+ggplot(data3, aes(x =ICD.Sub.Chapter.Code , y = Deaths)) + 
+  geom_col() + facet_wrap(~ICD.Chapter.Code, scales = 'free_y') + coord_flip()
+```
+
+Answer:
+
+Once we set them to have the same scale, it becomes easier to compare across graphs.
+
+We can see for the total dataset, the data spread from 0 to 600000. And the subgroups which have large number of death are now high lighted.
+
+For groups such as C00-D48, I00-I99, J00-J98...., we may refer they account for the greatest portion of deaths. However, the groups which account for small portion of deaths are hard to observe in this case.
+
+
+
+(d) Redraw the panels as *relative frequency* bar charts rather than *count* bar charts. (The lengths of the bars *in each panel separately* must sum to 1.) What new information do you gain?
+
+```{r, fig.height=15, fig.width=15}
+ggplot(data3, aes(x =ICD.Sub.Chapter.Code , 
+                  y = (Deaths)/sapply(PANEL, FUN=function(x) sum(Deaths[PANEL == x])))) + geom_col() +
+  facet_wrap(~ICD.Chapter.Code, scales = 'free_y') + coord_flip()+ labs(y = 'Relative Frequency')
+
+```
+
+Answer:
+
+This plot is an improved version for within group comparison. The scale 0-1, makes it also possible to do the across groups comparison. 
+
+For example, for group N00-N98, we can see the N17-N19 is not only a dominant one within the group, and we can see its weight is pretty high, almost 0.75 in that group.
+
+
+
+
+(e) Choose one of the small panels and redraw it as a single graph, using names rather than codes. (That is, use `ICD Chapter` and `ICD Sub-Chapter` instead of the code versions.)  What type of data is this? Note any interesting features.
+
+```{r}
+data4 = aggregate(Deaths~ICD.Sub.Chapter,
+                  subset(data2, ICD.Chapter=="Diseases of the eye and adnexa"), sum)
+ggplot(data4, aes(x = ICD.Sub.Chapter, y = Deaths)) + geom_col()  + coord_flip()
+```
+
+Answer:
+
+I choose the H00-H57 code group, which corresponds "Diseases of the eye and adnexa". 
+
+The data type is categorical. In general, nominal.
+
+We can see not that much people in 2005 are dead from eye diseases. And among them, we the disorders of eyelid, lacrimal system and orbit; visual disturbance and blindness, and disorders of choroid and retina are the most 3 dangerous causes.
+
+Though I'm not sure it'a direct or inditrect cause, it's interesting to me that serious eye disease could also cause deaths.
+
+#### 3. Detailed Mortality, questions about the data
+
+[6 points]
+
+Cite your sources with links. 
+
+(a) Who is included in the death counts?
+
+The mortality data are based on information from all death certificates filed in the fifty states and the District of Columbia. Deaths of nonresidents (e.g. nonresident aliens, nationals living abroad, residents of Puerto Rico, Guam, the Virgin Islands, and other territories of the U.S.) and fetal deaths are excluded.
+
+URL: https://wonder.cdc.gov/wonder/help/ucd.html#Mortality
+
+Mortality Data
+
+(b) When was this query processed?  (Hint: it's in the file itself; don't provide the file time stamp.)
+
+"Query Date: Feb 5, 2018 5:08:43 PM"
+
+In the last part of the txt file.
+
+(c) What does "ICD" stand for? Which version is used for this particular dataset? Name five other countries that use the ICD for official mortality data.
+
+International Classification of Diseases.
+
+Tenth Revision.
+
+The Czech Republic, Denmark, Romania, Slovakia, and Thailand.
+
+URL: http://library.ahima.org/doc?oid=58621#.WoN5R6inE2w
+
+(d) Which U.S. organizations collects mortality data? Where is the headquarters located?
+
+The Underlying Cause of Death data are produced by the National Center for Health Statistics (NCHS) at the Centers for Disease Control and Prevention (CDC). 
+
+URL: https://wonder.cdc.gov/wonder/help/ucd.html#Mortality
+
+Headquarters: Atlanta, Georgia, U.S.
+
+URL: https://en.wikipedia.org/wiki/Centers_for_Disease_Control_and_Prevention
+
+(e) In brief, how is the data collected?  What is the estimated accuracy rate, according to the dataset documentation?
+
+Mortality information is collected by state registries and provided to the National Vital Statistics System.
+
+Data are compiled from data provided by the 57 vital statistics jurisdictions through the Vital Statistics Cooperative Program.
+
+The population data are bridged-race estimates derived from U.S. Census Bureau files.
+
+Death rates based on counts of less than twenty (death count < 20) are flagged as "Unreliable". A death rate based on fewer than 20 deaths has a relative standard error (RSE(R)) of 23 percent or more. A RES(R) of 23 percent is considered statistically unreliable.
+
+
+
+
+### Chapter 5
+
+#### 1. Movie ratings
+
+[12 points]
+
+Explore *length* vs. *year* in the **ggplot2movies** dataset, after removing outliers. (Choose a reasonable cutoff).
+
+Draw four scatterplots of *length* vs. *year* from the with the following variations:
+
+(a) Points with alpha blending
+
+```{r}
+library(ggplot2movies)
+data5 <- filter(movies, length < 200)
+
+scatter <- ggplot(data5, aes(year,length)) + 
+  geom_point(alpha = .1)  + 
+  theme_gray(20)
+scatter
+
+```
+
+(b) Points with alpha blending + density estimate contour lines
+
+```{r}
+scatter + geom_density_2d(col='red')
+```
+
+(c) Hexagonal heatmap of bin counts
+
+```{r}
+
+scatter+geom_hex(binwidth = c(10, 20), alpha = 0.6) + geom_point(size = 0.2)
+
+```
+
+(d) Square heatmap of bin counts 
+
+```{r}
+scatter + geom_bin2d(binwidth = c(10,20), alpha = .6) + geom_point(size = .2)
+```
+
+For all, adjust parameters to the levels that provide the best views of the data.
+
+(e) Describe noteworthy features of the data, using the movie ratings example on page 82 (last page of Section 5.3) as a guide.  
+
+Answer:
+
+1. There are no films before 1900 has a long length.
+
+2. For films produced later, the length increase with year passing by.
+
+3. The cut for outliers were set at 200. Even by setting the cut at 200, there are still some outliers that were produced very early but still have a long length.
+
+4. Films prodcuded in recent years has length which varies from very low to very high.
+
+5. The only fims have very long average length are films produced in recent years.
+
+
+
+(f) How do (a)-(d) compare? Are there features that you can see in some but not all of the graphs?
+
+Answer:
+
+1. In general, (b)(c)(d) are better than (a), because (a) only shows a scratched concentration, and a little trend.
+
+2. The contour lines show us the clusters of the points. There are three clusters: low length, produced earlier; long length, produced recntly; and medium length, produced over time since 1930.
+
+3. Compared with contour lines, hexagonal heatmap and square heatmap serve similar purpose. Though didn't show the clear cluster, the boundaries clearly show the area covered by those points. And the heatmap gave us a glimpse of the density.
+
+4.Hexagonal for me is a little more elegant than the square one, just for the sense of beauty.
+
+#### 2. Leaves (Chapter 5 exercises, #7, p. 96)
+
+[6 points]
+
+(a) 
+```{r}
+library(DAAG)
+data6 = leafshape
+
+splom <- data6 %>% 
+  select(bladelen, petiole, bladewid)
+logsplom <- data6 %>% 
+  select(loglen, logpet, logwid)
+plot(splom)
+plot(logsplom)
+```
+
+Answer:
+
+There are probably positive correlations among length, petiole and width.
+
+I would prefer the log transformed one, since the original data is of different magnitude, and log scale make the data to the same magnitude, and would thus plot more intuitive graphs.
+
+Also this feature engineering would be helpful for the later analyzing process. 
+
+(b)
+```{r}
+splom <- data6 %>% 
+  select(bladelen, petiole, bladewid, arch)
+logsplom <- data6 %>% 
+  select(loglen, logpet, logwid, arch)
+cols <- character(nrow(splom))
+cols[splom$arch ==1] <- "blue"
+cols[splom$arch ==0] <- "red"
+cols[logsplom$arch ==1] <- "blue"
+cols[logsplom$arch ==0] <- "red"
+
+
+pairs(splom[,1:3],col=cols)
+pairs(logsplom[,1:3],col=cols)
+```
+
+
+Answer:
+
+From the unscaled color graph, we can see the arch=1 type leaf usually is longer, wider and also have a larger petiole.
+
+From the scaled color graph, we can see the arch=1 type leaf is a little bit more spread with a wider range of the three variables, while the arch=0 type leaf is a little bit more close clustered.
